@@ -47,6 +47,29 @@ npm run dev               # then open http://localhost:5173
 
 Every push to GitHub redeploys automatically.
 
+## 📱 iPhone app (automatic score capture)
+
+The `ios/` folder holds a small SwiftUI app that shows the Daily Dose site and opens each game in an in-app browser (WKWebView). It injects a script into the game that catches the text when you tap the game's **Share** button. Your score is saved automatically and the text is still copied, so you can drop it in the group chat.
+
+**Build it on your Mac** (needs Xcode from the App Store):
+```bash
+brew install xcodegen          # one time (needs Homebrew: https://brew.sh)
+cd krillion_u/ios
+open -e DailyDose/AppConfig.swift   # set webAppURL to your Vercel URL
+xcodegen                       # creates DailyDose.xcodeproj
+open DailyDose.xcodeproj
+```
+In Xcode, select the **DailyDose** target, open **Signing & Capabilities**, pick your Apple ID as the Team and change the Bundle Identifier to something unique. Plug in your iPhone, select it at the top, and press ▶. The first time, approve the developer on the phone under **Settings → General → VPN & Device Management**.
+
+**Getting it onto friends' phones:**
+- With a **free Apple ID**, the app only installs on phones plugged into your Mac, and it stops opening after 7 days until you press ▶ again.
+- With the **paid Apple Developer Program ($99/yr)**, you can send it through **TestFlight** to up to 100 friends with a link.
+- Friends on Android, or anyone without the app, can use the website and paste their results. Everyone shares the same leaderboard.
+
+**Testing against your Mac instead of Vercel:** run `npm run dev -- --host`, then set `webAppURL` to `http://<your-mac-ip>:5173`. Find the IP with `ipconfig getifaddr en0`.
+
+**Debugging:** on the Mac, turn on Safari → Settings → Advanced → "Show features for web developers". Then the **Develop** menu lets you inspect both the Daily Dose page and the game pages running on the phone.
+
 ## Dev
 ```bash
 npm test        # share-text parser tests

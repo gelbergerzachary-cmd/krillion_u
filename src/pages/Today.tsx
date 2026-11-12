@@ -4,6 +4,8 @@ import { GAMES, MAX_DAILY_POINTS, detectAndParse, type Game, type GameId, type G
 import { supabase, type ScoreRow } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { prettyDate, today } from '../lib/dates';
+import { SCORES_CHANGED, saveScore } from '../lib/scores';
+import { isNativeApp, openInApp } from '../lib/native';
 
 export default function Today() {
   const { session } = useAuth();
@@ -21,6 +23,8 @@ export default function Today() {
 
   useEffect(() => {
     load();
+    window.addEventListener(SCORES_CHANGED, load);
+    return () => window.removeEventListener(SCORES_CHANGED, load);
   }, [load]);
 
   const flash = (msg: string) => {
@@ -29,23 +33,11 @@ export default function Today() {
   };
 
   const save = async (game: Game, result: GameResult, raw: string | null) => {
-    const { error } = await supabase.from('scores').upsert(
-      {
-        user_id: userId,
-        game: game.id,
-        play_date: date,
-        solved: result.solved,
-        value: result.value,
-        points: result.points,
-        raw: raw?.slice(0, 2000) ?? null,
-      },
-      { onConflict: 'user_id,game,play_date' },
-    );
+    const error = await saveScore(userId, game, result, raw);
     if (error) return flash(`Couldn't save: ${error.message}`);
     flash(`${game.emoji} ${game.name} saved · +${result.points}`);
     setPaste('');
     setManualFor(null);
-    load();
   };
 
   const remove = async (game: Game) => {
@@ -91,7 +83,11 @@ export default function Today() {
 
       <section className="card">
         <h2>Paste a result</h2>
-        <p className="muted small">Hit "Share" in any game, then paste here. We'll work out which game it is.</p>
+        <p className="muted small">
+          {isNativeApp()
+            ? 'Tap Play, then hit Share in the game. Your score saves automatically. You can also paste here.'
+            : 'Hit "Share" in any game, then paste here. We\'ll work out which game it is.'}
+        </p>
         <textarea
           rows={4}
           value={paste}
@@ -150,8 +146,16 @@ export default function Today() {
                 <ManualForm game={g} raw={paste} onCancel={() => setManualFor(null)} onSave={save} />
               ) : (
                 <div className="game-actions">
-                  <a className="button primary" href={g.url} target="_blank" rel="noreferrer">
-                    {r ? 'Open' : 'Play'} ↗
+                  <a
+                    className="button primary"
+                    href={g.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      if (openInApp(g)) e.preventDefault();
+                    }}
+                  >
+                    {r ? 'Open' : 'Play'} {isNativeApp() ? '▶' : '↗'}
                   </a>
                   <button onClick={() => setManualFor(g.id)}>{r ? 'Edit' : 'Enter manually'}</button>
                 </div>

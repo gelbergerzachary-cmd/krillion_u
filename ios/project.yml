@@ -1,0 +1,29 @@
+# Generate the Xcode project with:  brew install xcodegen && xcodegen
+name: DailyDose
+options:
+  bundleIdPrefix: com.dailydose
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  DailyDose:
+    type: application
+    platform: iOS
+    sources: [DailyDose]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dailydose.app # change to something unique, e.g. com.yourname.dailydose
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: DailyDose/Info.plist
+      properties:
+        CFBundleDisplayName: Daily Dose
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIUserInterfaceStyle: Dark
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true # lets the app load `npm run dev` from your Mac over Wi-Fi

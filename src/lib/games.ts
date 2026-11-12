@@ -86,7 +86,7 @@ export const GAMES: Game[] = [
     id: 'wordle',
     name: 'Wordle',
     emoji: '🟩',
-    url: 'https://www.nytimes.com/games/wordle/index.html',
+    url: 'https://www.nytimes.com/games/wordle/index.html?eafs_enabled=false',
     color: '#6aaa64',
     blurb: 'Guess the 5-letter word in 6',
     manual: { kind: 'guesses', max: 6, label: 'Guesses' },
@@ -99,7 +99,7 @@ export const GAMES: Game[] = [
     id: 'connections',
     name: 'Connections',
     emoji: '🟪',
-    url: 'https://www.nytimes.com/games/connections',
+    url: 'https://www.nytimes.com/games/connections?eafs_enabled=false',
     color: '#b07ee8',
     blurb: 'Four groups of four',
     manual: { kind: 'mistakes', max: 4 },
@@ -124,7 +124,7 @@ export const GAMES: Game[] = [
     id: 'feetle',
     name: 'Feetle',
     emoji: '⚽',
-    url: 'https://www.google.com/search?q=feetle', // TODO: put the real Feetle link here
+    url: 'https://feetle.fun',
     color: '#3fb6a8',
     blurb: 'Daily guessing game',
     manual: { kind: 'guesses', max: 6, label: 'Guesses' },
@@ -173,9 +173,17 @@ function globlePoints(guesses: number) {
 export const GAME_BY_ID = Object.fromEntries(GAMES.map((g) => [g.id, g])) as Record<GameId, Game>;
 
 /** Figure out which game a pasted share is from, and parse it. */
-export function detectAndParse(text: string): { game: Game; result: GameResult } | { game: Game; result: null } | null {
+export function detectAndParse(
+  text: string,
+  hint?: GameId,
+): { game: Game; result: GameResult } | { game: Game; result: null } | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
+  // When the iOS app captured the text inside a specific game, trust that first.
+  if (hint && GAME_BY_ID[hint]) {
+    const r = GAME_BY_ID[hint].parse(trimmed);
+    if (r) return { game: GAME_BY_ID[hint], result: r };
+  }
   // NYT games first, since their names are explicit and other shares may include globe emoji etc.
   const order: GameId[] = ['wordle', 'connections', 'krillion', 'feetle', 'globle'];
   for (const id of order) {
