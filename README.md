@@ -5,7 +5,7 @@ One daily scoreboard for **Krillion, Wordle, Connections, Feetle and Globle**, s
 Play each game on its own site as usual, hit **Share**, and paste the result into Daily Dose. It works out which game it is, reads the score and puts it on your group's leaderboards (per game and overall, for today, 7 days, 30 days or all time).
 
 - Each game is worth up to **100 pts/day**, so the overall maximum is **500/day**.
-- If a share can't be read, every game also has an **Enter manually** option.
+- Tap Play → Share in the game → come back and tap **Paste result**. If a share can't be read, every game also has **Enter manually**.
 - Make groups and send friends an invite link (`/join/<code>`).
 
 ## Scoring
@@ -47,28 +47,20 @@ npm run dev               # then open http://localhost:5173
 
 Every push to GitHub redeploys automatically.
 
-## 📱 iPhone app (automatic score capture)
+## 📱 Using it on your phone
 
-The `ios/` folder holds a small SwiftUI app that shows the Daily Dose site and opens each game in an in-app browser (WKWebView). It injects a script into the game that catches the text when you tap the game's **Share** button. Your score is saved automatically and the text is still copied, so you can drop it in the group chat.
+Open your Vercel URL and **add it to your Home Screen** so it opens like an app:
+- **iPhone (Safari):** tap Share, then **Add to Home Screen**
+- **Android (Chrome):** tap ⋮, then **Install app** / **Add to Home screen**
 
-**Build it on your Mac** (needs Xcode from the App Store):
-```bash
-brew install xcodegen          # one time (needs Homebrew: https://brew.sh)
-cd krillion_u/ios
-open -e DailyDose/AppConfig.swift   # set webAppURL to your Vercel URL
-xcodegen                       # creates DailyDose.xcodeproj
-open DailyDose.xcodeproj
-```
-In Xcode, select the **DailyDose** target, open **Signing & Capabilities**, pick your Apple ID as the Team and change the Bundle Identifier to something unique. Plug in your iPhone, select it at the top, and press ▶. The first time, approve the developer on the phone under **Settings → General → VPN & Device Management**.
+**Logging a score:**
+1. Tap **Play** on a game. Daily Dose remembers which one you opened.
+2. In the game, tap **Share** / **Copy results**.
+3. Come back to Daily Dose and tap **📋 Paste result**. On iPhone, also tap the small **Paste** bubble Safari shows. Desktop Chrome and Android can read the clipboard automatically once you allow it.
 
-**Getting it onto friends' phones:**
-- With a **free Apple ID**, the app only installs on phones plugged into your Mac, and it stops opening after 7 days until you press ▶ again.
-- With the **paid Apple Developer Program ($99/yr)**, you can send it through **TestFlight** to up to 100 friends with a link.
-- Friends on Android, or anyone without the app, can use the website and paste their results. Everyone shares the same leaderboard.
+**Android extra:** once installed, Daily Dose appears in the game's share sheet. Share straight to it and the score saves with no pasting.
 
-**Testing against your Mac instead of Vercel:** run `npm run dev -- --host`, then set `webAppURL` to `http://<your-mac-ip>:5173`. Find the IP with `ipconfig getifaddr en0`.
-
-**Debugging:** on the Mac, turn on Safari → Settings → Advanced → "Show features for web developers". Then the **Develop** menu lets you inspect both the Daily Dose page and the game pages running on the phone.
+> Why not play the games *inside* Daily Dose? NYT (and most sites) block being embedded in other websites, and browsers don't let one site read another site's page. Grabbing the Share text is the most a web app can do.
 
 ## Dev
 ```bash

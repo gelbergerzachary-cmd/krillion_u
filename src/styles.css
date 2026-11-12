@@ -200,3 +200,13 @@ label.check input { width: auto; }
   .toolbar .seg { width: 100%; }
   .toolbar .seg button { flex: 1; padding: 6px 4px; }
 }
+
+.between { justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.small-btn { padding: 6px 10px; font-size: 0.85rem; }
+.return-banner {
+  --accent: var(--brand);
+  display: flex; align-items: center; gap: 10px;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+}
+.return-banner .primary { background: var(--accent); border-color: var(--accent); }

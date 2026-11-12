@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { GAMES, MAX_DAILY_POINTS, detectAndParse, type Game, type GameId, type GameResult } from '../lib/games';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { GAMES, GAME_BY_ID, MAX_DAILY_POINTS, detectAndParse, type Game, type GameId, type GameResult } from '../lib/games';
 import { supabase, type ScoreRow } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { prettyDate, today } from '../lib/dates';
 import { SCORES_CHANGED, saveScore } from '../lib/scores';
-import { isNativeApp, openInApp } from '../lib/native';
 
 export default function Today() {
   const { session } = useAuth();
@@ -15,6 +14,16 @@ export default function Today() {
   const [paste, setPaste] = useState('');
   const [manualFor, setManualFor] = useState<GameId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // The game you last tapped "Play" on. When you come back, we check the clipboard for its result.
+  const [awaiting, setAwaiting] = useState<GameId | null>(() => {
+    try {
+      return sessionStorage.getItem('dd.awaiting') as GameId | null;
+    } catch {
+      return null;
+    }
+  });
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('scores').select('*').eq('user_id', userId).eq('play_date', date);
@@ -29,7 +38,26 @@ export default function Today() {
 
   const flash = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2200);
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  // A message handed over from the /share page (Android share sheet)
+  useEffect(() => {
+    const msg = (location.state as { toast?: string } | null)?.toast;
+    if (msg) {
+      flash(msg);
+      navigate('.', { replace: true, state: null });
+    }
+  }, [location.state, navigate]);
+
+  const setAwaitingGame = (id: GameId | null) => {
+    setAwaiting(id);
+    try {
+      if (id) sessionStorage.setItem('dd.awaiting', id);
+      else sessionStorage.removeItem('dd.awaiting');
+    } catch {
+      /* ignore */
+    }
   };
 
   const save = async (game: Game, result: GameResult, raw: string | null) => {
@@ -38,7 +66,53 @@ export default function Today() {
     flash(`${game.emoji} ${game.name} saved · +${result.points}`);
     setPaste('');
     setManualFor(null);
+    if (awaitingRef.current === game.id) setAwaitingGame(null);
   };
+
+  const scoresRef = useRef(scores);
+  scoresRef.current = scores;
+  const awaitingRef = useRef(awaiting);
+  awaitingRef.current = awaiting;
+
+  /** Read the clipboard and save any game result on it. `userTapped` = show feedback if nothing found. */
+  const grabClipboard = useCallback(
+    async (userTapped: boolean) => {
+      let text = '';
+      try {
+        text = (await navigator.clipboard.readText()).trim();
+      } catch {
+        if (userTapped) flash('Clipboard blocked. Paste into the box instead.');
+        return;
+      }
+      const found = detectAndParse(text, awaitingRef.current ?? undefined);
+      if (!found?.result) {
+        if (userTapped) flash(found ? `Couldn't read the ${found.game.name} score` : 'No game result on your clipboard');
+        return;
+      }
+      if (scoresRef.current[found.game.id]?.raw === text) {
+        if (userTapped) flash(`${found.game.name} already saved`);
+        if (awaitingRef.current === found.game.id) setAwaitingGame(null);
+        return;
+      }
+      await save(found.game, found.result, text);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId],
+  );
+
+  // Coming back to this tab after playing → try the clipboard automatically.
+  // (Works silently on browsers that allow it; on iPhone Safari you'll use the Paste button.)
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState === 'visible' && awaitingRef.current) grabClipboard(false);
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+    return () => {
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+    };
+  }, [grabClipboard]);
 
   const remove = async (game: Game) => {
     await supabase.from('scores').delete().eq('user_id', userId).eq('game', game.id).eq('play_date', date);
@@ -81,13 +155,31 @@ export default function Today() {
         </div>
       </section>
 
+      {awaiting && !scores[awaiting] && (
+        <section className="card return-banner" style={{ ['--accent' as string]: GAME_BY_ID[awaiting].color }}>
+          <div className="grow">
+            <b>
+              Back from {GAME_BY_ID[awaiting].emoji} {GAME_BY_ID[awaiting].name}?
+            </b>
+            <div className="muted small">Tap Share in the game, then tap here.</div>
+          </div>
+          <button className="primary" onClick={() => grabClipboard(true)}>
+            📋 Paste result
+          </button>
+          <button className="link small" onClick={() => setAwaitingGame(null)} aria-label="Dismiss">
+            ✕
+          </button>
+        </section>
+      )}
+
       <section className="card">
-        <h2>Paste a result</h2>
-        <p className="muted small">
-          {isNativeApp()
-            ? 'Tap Play, then hit Share in the game. Your score saves automatically. You can also paste here.'
-            : 'Hit "Share" in any game, then paste here. We\'ll work out which game it is.'}
-        </p>
+        <div className="row between">
+          <h2 className="no-margin">Add a result</h2>
+          <button className="small-btn" onClick={() => grabClipboard(true)}>
+            📋 Paste from clipboard
+          </button>
+        </div>
+        <p className="muted small">Tap Share in any game, then come back here. We'll work out which game it was.</p>
         <textarea
           rows={4}
           value={paste}
@@ -151,11 +243,9 @@ export default function Today() {
                     href={g.url}
                     target="_blank"
                     rel="noreferrer"
-                    onClick={(e) => {
-                      if (openInApp(g)) e.preventDefault();
-                    }}
+                    onClick={() => setAwaitingGame(g.id)}
                   >
-                    {r ? 'Open' : 'Play'} {isNativeApp() ? '▶' : '↗'}
+                    {r ? 'Open' : 'Play'} ↗
                   </a>
                   <button onClick={() => setManualFor(g.id)}>{r ? 'Edit' : 'Enter manually'}</button>
                 </div>

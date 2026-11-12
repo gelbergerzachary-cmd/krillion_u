@@ -8,19 +8,18 @@ import Leaderboard from './pages/Leaderboard';
 import Groups from './pages/Groups';
 import Join from './pages/Join';
 import Setup from './pages/Setup';
-import { useNativeCapture } from './lib/native';
+import Share from './pages/Share';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
   const location = useLocation();
   if (loading) return <div className="center muted">Loading…</div>;
-  if (!session) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (!session) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   return <>{children}</>;
 }
 
 function Shell({ children }: { children: ReactNode }) {
-  const { profile, session } = useAuth();
-  useNativeCapture(session?.user.id);
+  const { profile } = useAuth();
   return (
     <div className="app">
       <header className="topbar">
@@ -65,6 +64,7 @@ export default function App() {
       <Route path="/leaderboard" element={protect(<Leaderboard />)} />
       <Route path="/groups" element={protect(<Groups />)} />
       <Route path="/join/:code" element={protect(<Join />)} />
+      <Route path="/share" element={protect(<Share />)} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
