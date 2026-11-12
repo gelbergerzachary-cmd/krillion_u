@@ -9,6 +9,7 @@ import Groups from './pages/Groups';
 import Join from './pages/Join';
 import Setup from './pages/Setup';
 import Share from './pages/Share';
+import { useNativeCapture } from './lib/native';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
@@ -19,7 +20,8 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 function Shell({ children }: { children: ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
+  useNativeCapture(session?.user.id);
   return (
     <div className="app">
       <header className="topbar">

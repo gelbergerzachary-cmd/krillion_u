@@ -5,6 +5,7 @@ import { supabase, type ScoreRow } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { prettyDate, today } from '../lib/dates';
 import { SCORES_CHANGED, saveScore } from '../lib/scores';
+import { isNativeApp, openInApp } from '../lib/native';
 
 export default function Today() {
   const { session } = useAuth();
@@ -179,7 +180,11 @@ export default function Today() {
             📋 Paste from clipboard
           </button>
         </div>
-        <p className="muted small">Tap Share in any game, then come back here. We'll work out which game it was.</p>
+        <p className="muted small">
+          {isNativeApp()
+            ? 'Tap Play, then hit Share in the game. Your score saves itself.'
+            : "Tap Share in any game, then come back here. We'll work out which game it was."}
+        </p>
         <textarea
           rows={4}
           value={paste}
@@ -243,9 +248,12 @@ export default function Today() {
                     href={g.url}
                     target="_blank"
                     rel="noreferrer"
-                    onClick={() => setAwaitingGame(g.id)}
+                    onClick={(e) => {
+                      if (openInApp(g)) e.preventDefault();
+                      else setAwaitingGame(g.id);
+                    }}
                   >
-                    {r ? 'Open' : 'Play'} ↗
+                    {r ? 'Open' : 'Play'} {isNativeApp() ? '▶' : '↗'}
                   </a>
                   <button onClick={() => setManualFor(g.id)}>{r ? 'Edit' : 'Enter manually'}</button>
                 </div>
